@@ -109,6 +109,12 @@ def testPairings():
     registerPlayer("Applejack")
     registerPlayer("Pinkie Pie")
     standings = playerStandings()
+
+    # added my code here to check for number of players to be even.!!
+    if (len(standings) % 2 != 0): 
+        print "Cannot test, Number of players are not even."
+        return
+
     [id1, id2, id3, id4] = [row[0] for row in standings]
     reportMatch(id1, id2)
     reportMatch(id3, id4)

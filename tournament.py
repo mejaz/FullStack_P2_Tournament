@@ -6,37 +6,38 @@
 import psycopg2
 
 
-def connect():
+def connect(db_name="tournament"):
     """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
-    conn = psycopg2.connect(tournament)
-    return conn
+    try:
+        db = psycopg2.connect("dbname={}".format(db_name))
+        cursor = db.cursor()
+        return db, cursor
+    except:
+        print("Connection failed.")
+
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    varConn = connect()
-    cursor = varConn.cursor()
+    db, cursor = connect()
     cursor.execute("DELETE FROM match_results;")
-    varConn.commit()
-    varConn.close()
+    db.commit()
+    db.close()
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    varConn = connect()
-    cursor = varConn.cursor()
+    db, cursor = connect()
     cursor.execute("DELETE FROM players;")
-    varConn.commit()
-    varConn.close()
+    db.commit()
+    db.close()
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    varConn = connect()
-    cursor = varConn.cursor()
-    cursor.execute("Select Count(player_name) from players;")
+    db, cursor = connect()
+    cursor.execute("SELECT Count(player_name) FROM players;")
     noOfPlayers = cursor.fetchall()
-    varConn.close()
+    db.close()
     return noOfPlayers[0][0]
 
 def registerPlayer(name):
@@ -48,12 +49,11 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    varConn = connect()
-    cursor = varConn.cursor()
+    db, cursor = connect()
     cursor.execute("INSERT INTO players (player_name) VALUES (%s);", (name,))
-    cursor.execute("INSERT INTO match_results (id, player_name, wins, matches) SELECT player_id, player_name, 0, 0 FROM players Order By player_id DESC Limit 1;")
-    varConn.commit()
-    varConn.close()
+    cursor.execute("INSERT INTO match_results (player_id, player_name, wins, matches) SELECT player_id, player_name, 0, 0 FROM players Order By player_id DESC Limit 1;")
+    db.commit()
+    db.close()
 
 def playerStandings():
     """Returns a list of the players and their win records, sorted by wins.
@@ -68,11 +68,10 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    varConn = connect()
-    cursor = varConn.cursor()
-    cursor.execute("SELECT * from match_results ORDER By wins DESC;")
+    db, cursor = connect()
+    cursor.execute("SELECT * FROM match_results ORDER By wins DESC;")
     finList = cursor.fetchall()
-    varConn.close()
+    db.close()
     return finList
 
 def reportMatch(winner, loser):
@@ -82,12 +81,11 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    varConn = connect()
-    cursor = varConn.cursor()
-    cursor.execute("Update match_results set wins = 1, matches = 1 where id = %s;", (winner,))
-    cursor.execute("Update match_results set wins = 0, matches = 1 where id = %s;", (loser,))
-    varConn.commit()
-    varConn.close()
+    db, cursor = connect()
+    cursor.execute("Update match_results set wins = wins + 1, matches = matches + 1 where player_id = %s;", (winner,))
+    cursor.execute("Update match_results set wins = wins + 0, matches = matches + 1 where player_id = %s;", (loser,))
+    db.commit()
+    db.close()
  
  
 def swissPairings():
@@ -105,12 +103,12 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    varConn = connect()
-    cursor = varConn.cursor()
-    cursor.execute("SELECT id, player_name from match_results ORDER By wins DESC;")
+    db, cursor = connect()
+
+    cursor.execute("SELECT player_id, player_name FROM match_results ORDER By wins DESC;")
     finList = cursor.fetchall()
     list1 = []
     for i in xrange(0, (len(finList) - 1), 2):
         list1.append((finList[i][0], finList[i][1], finList[i+1][0], finList[i+1][1]))
+    db.close()
     return list1
-
